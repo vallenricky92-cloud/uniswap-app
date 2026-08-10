@@ -15,6 +15,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { useTokenList, Token } from '../hooks/useTokenList';
+import { useCurrency } from '../context/CurrencyContext';
 import TokenSelector from '../components/swap/TokenSelector';
 
 interface Position {
@@ -33,6 +34,7 @@ interface Position {
 }
 
 export default function Pools() {
+  const { formatFiat } = useCurrency();
   const { data: tokens } = useTokenList();
   const [activeTab, setActiveTab] = useState<'pools' | 'positions' | 'add'>('pools');
 
@@ -585,7 +587,7 @@ export default function Pools() {
                     <div>
                       <span className="text-text-tertiary font-medium block">Total Value Locked</span>
                       <span className="text-base font-mono font-bold text-text-primary mt-0.5 block">
-                        ${pos.totalValueUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {formatFiat(pos.totalValueUsd)}
                       </span>
                       <span className="text-[10px] text-text-tertiary mt-0.5 block">
                         {pos.amount0} {pos.token0.symbol} + {pos.amount1} {pos.token1.symbol}
@@ -595,7 +597,7 @@ export default function Pools() {
                     <div>
                       <span className="text-text-tertiary font-medium block">Uncollected Fees</span>
                       <span className="text-base font-mono font-bold text-emerald-400 mt-0.5 block">
-                        ${pos.uncollectedFeesUsd.toFixed(2)}
+                        {formatFiat(pos.uncollectedFeesUsd)}
                       </span>
                       <span className="text-[10px] text-text-tertiary mt-0.5 block">
                         Range: {pos.minPrice === 0 ? 'Full' : `$${pos.minPrice} - $${pos.maxPrice}`}

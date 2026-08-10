@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavig
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { ThemeProvider } from './hooks/useTheme';
+import { CurrencyProvider } from './context/CurrencyContext';
 import { ContractProvider } from './context/ContractContext';
 import { ToastProvider } from './components/common/UniswapToast';
 import { NetworkSwitchListener } from './components/common/NetworkSwitchModal';
@@ -89,24 +90,26 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <ContractProvider>
+      <CurrencyProvider>
         <ToastProvider>
-          <NetworkSwitchListener />
-          {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={1800} />}
-          <Router>
-            <AdminShortcutListener />
-            <div className="min-h-screen flex flex-col relative bg-background font-body">
-              <BackgroundCoins />
-              <Header />
-              <main className="flex-1 w-full flex flex-col relative z-0">
-                <AnimatedRoutes />
-              </main>
-              <AIAssistant />
-              <MobileActionMenu />
-            </div>
-          </Router>
+          <ContractProvider>
+            <NetworkSwitchListener />
+            {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={1800} />}
+            <Router>
+              <AdminShortcutListener />
+              <div className="min-h-screen flex flex-col relative bg-background font-body">
+                <BackgroundCoins />
+                <Header />
+                <main className="flex-1 w-full flex flex-col relative z-0">
+                  <AnimatedRoutes />
+                </main>
+                <AIAssistant />
+                <MobileActionMenu />
+              </div>
+            </Router>
+          </ContractProvider>
         </ToastProvider>
-      </ContractProvider>
+      </CurrencyProvider>
     </ThemeProvider>
   );
 }

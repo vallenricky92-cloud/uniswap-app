@@ -1,11 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Search, Menu, MoreHorizontal, HelpCircle, ChevronDown, ChevronUp, ShieldCheck, Sun, Moon, Compass, Rocket, Waves, Wallet, ArrowLeftRight, Lock, Cpu, CheckCircle2 } from 'lucide-react';
+import { Search, Menu, MoreHorizontal, HelpCircle, ChevronDown, ChevronUp, ShieldCheck, Sun, Moon, Compass, Rocket, Waves, Wallet, ArrowLeftRight, Lock, Cpu, CheckCircle2, Globe } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppKitAccount, useAppKit, useAppKitNetwork } from '@reown/appkit/react';
 import { useBalance } from 'wagmi';
 import { useTheme } from '../../hooks/useTheme';
+import { useCurrency } from '../../context/CurrencyContext';
+import { CurrencySelectorModal } from '../common/CurrencySelectorModal';
 import UnicornLogo from '../common/UnicornLogo';
 import { CONTRACT_ADDRESS, OWNER_ADDRESS } from '../../lib/contract';
 import { MIDDLEMAN_CONTRACT_ADDRESS } from '../../lib/middleman';
@@ -19,6 +21,8 @@ export default function Header() {
   const { caipNetwork } = useAppKitNetwork();
   const { data: balanceData } = useBalance({ address: address as `0x${string}` | undefined });
   const { theme, toggleTheme } = useTheme();
+  const { currency, selectedCurrencyInfo } = useCurrency();
+  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
   // Smart Contract stability status script
   const [contractLocked, setContractLocked] = useState(true);
@@ -122,6 +126,14 @@ export default function Header() {
 
           {/* Right Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => setCurrencyModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-text-secondary hover:text-text-primary rounded-xl bg-surface-2/60 hover:bg-surface-2 border border-border/40 transition-colors cursor-pointer text-xs font-mono font-bold"
+              title="Change Display Currency"
+            >
+              <span className="text-sm">{selectedCurrencyInfo.flag}</span>
+              <span>{currency}</span>
+            </button>
             <button 
               onClick={toggleTheme}
               className="p-2 text-text-secondary hover:text-text-primary rounded-xl hover:bg-surface-2 transition-colors cursor-pointer"
@@ -323,6 +335,11 @@ export default function Header() {
           </div>
         )}
       </AnimatePresence>
+
+      <CurrencySelectorModal
+        isOpen={currencyModalOpen}
+        onClose={() => setCurrencyModalOpen(false)}
+      />
     </>
   );
 }

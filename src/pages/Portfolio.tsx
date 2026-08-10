@@ -3,12 +3,14 @@ import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
 import { useBalance } from 'wagmi';
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid } from 'recharts';
 import { useTokenList } from '../hooks/useTokenList';
+import { useCurrency } from '../context/CurrencyContext';
 import { PullToRefresh } from '../components/common/PullToRefresh';
 import { Wallet, TrendingUp, ArrowUpRight, Calendar, Activity, RefreshCw } from 'lucide-react';
 
 type Timeframe = '1D' | '1W' | '1M' | '1Y' | 'ALL';
 
 export default function Portfolio() {
+  const { formatFiat, convertUSD, selectedCurrencyInfo } = useCurrency();
   const { address, isConnected } = useAppKitAccount();
   const { open } = useAppKit();
 
@@ -176,7 +178,7 @@ export default function Portfolio() {
           </h1>
           <div className="flex items-baseline gap-3">
             <div className="text-4xl sm:text-5xl font-display font-extrabold text-text-primary">
-              ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatFiat(totalValue)}
             </div>
             {totalValue > 0 && (
               <div
@@ -322,7 +324,7 @@ export default function Portfolio() {
                     labelStyle={{ color: 'var(--text-tertiary)', fontSize: '11px', fontWeight: 'bold' }}
                     itemStyle={{ color: 'var(--text-primary)', fontSize: '12px', fontWeight: 'bold' }}
                     formatter={(value: number, name: string) => [
-                      `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0}%)`,
+                      `${formatFiat(value)} (${totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0}%)`,
                       name,
                     ]}
                   />
@@ -332,7 +334,7 @@ export default function Portfolio() {
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
                 <span className="text-xs text-text-tertiary font-medium">Total Value</span>
                 <span className="text-lg font-bold font-mono text-text-primary">
-                  ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatFiat(totalValue)}
                 </span>
               </div>
             </div>
@@ -363,7 +365,7 @@ export default function Portfolio() {
 
                   <div className="flex flex-col items-end">
                     <span className="font-mono font-bold text-xs text-text-primary">
-                      ${item.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {formatFiat(item.value)}
                     </span>
                     <span className="text-[10px] font-bold text-accent font-mono bg-accent/10 px-1.5 py-0.5 rounded-md">
                       {pct}%
@@ -418,7 +420,7 @@ export default function Portfolio() {
                           </div>
                         </td>
                         <td className="py-4 px-6 text-right font-mono">
-                          ${item.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          {formatFiat(item.value)}
                         </td>
                       </tr>
                     );

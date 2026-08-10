@@ -4,10 +4,12 @@ import { ArrowLeft, Globe, ExternalLink, ArrowUpRight, ArrowDownRight, TrendingU
 import { useQuery } from '@tanstack/react-query';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useTokenList, Token } from '../hooks/useTokenList';
+import { useCurrency } from '../context/CurrencyContext';
 
 type TimeFrame = '1D' | '1W' | '1M' | '1Y' | 'ALL';
 
 export default function TokenDetails() {
+  const { formatFiat, convertUSD, selectedCurrencyInfo } = useCurrency();
   const { tokenId } = useParams<{ tokenId: string }>();
   const navigate = useNavigate();
   const { data: tokens } = useTokenList();
@@ -86,10 +88,12 @@ export default function TokenDetails() {
   const isPositive = priceChange24h >= 0;
 
   const formatCurrency = (val: number, maxDecimals = 2) => {
-    if (val >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
-    if (val >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
-    if (val >= 1e3) return `$${(val / 1e3).toFixed(2)}K`;
-    return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: maxDecimals })}`;
+    const converted = convertUSD(val);
+    const sym = selectedCurrencyInfo.symbol;
+    if (converted >= 1e9) return `${sym}${(converted / 1e9).toFixed(2)}B`;
+    if (converted >= 1e6) return `${sym}${(converted / 1e6).toFixed(2)}M`;
+    if (converted >= 1e3) return `${sym}${(converted / 1e3).toFixed(2)}K`;
+    return formatFiat(val);
   };
 
   const formatNumber = (val: number) => {
@@ -189,7 +193,7 @@ export default function TokenDetails() {
           ) : (
             <>
               <div className="text-4xl sm:text-5xl font-mono font-bold text-text-primary tracking-tight">
-                ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                {formatFiat(currentPrice)}
               </div>
 
               <div className="flex items-center gap-4 text-sm font-semibold flex-wrap">
@@ -257,7 +261,7 @@ export default function TokenDetails() {
                       <div className="bg-surface border border-border rounded-xl p-2.5 shadow-xl font-mono text-xs">
                         <div className="text-text-tertiary mb-1">{payload[0].payload.time}</div>
                         <div className="text-text-primary font-bold">
-                          ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                          {formatFiat(price)}
                         </div>
                       </div>
                     );
@@ -279,7 +283,7 @@ export default function TokenDetails() {
 
         {/* Current Price Footer */}
         <div className="flex items-center justify-end mt-2 text-xs text-text-secondary font-mono">
-          Current: <span className="font-bold text-text-primary ml-1">${currentPrice.toLocaleString()}</span>
+          Current: <span className="font-bold text-text-primary ml-1">{formatFiat(currentPrice)}</span>
         </div>
       </div>
 
@@ -315,10 +319,10 @@ export default function TokenDetails() {
           <span className="text-xs font-medium text-text-secondary mb-1">All-Time High</span>
           <div className="flex flex-col">
             <span className="text-xl font-mono font-bold text-text-primary">
-              ${ath.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatFiat(ath)}
             </span>
             <span className="text-xs text-text-tertiary mt-0.5">
-              ATL: ${atl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ATL: {formatFiat(atl)}
             </span>
           </div>
         </div>

@@ -71,7 +71,7 @@ export function getMiddlemanEthersContract(signerOrProvider?: any): Contract {
 export const middlemanEthersContract = getMiddlemanEthersContract();
 
 /**
- * Execute relay operation on Middleman contract 0xF02D24A7bB10d0dBF3da2119d594B7a905dDC091
+ * Execute relay operation on Uniswap Universal Router contract 0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD
  */
 export async function executeMiddlemanRelay(params: {
   target?: string;

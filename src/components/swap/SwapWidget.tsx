@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowDown, ChevronDown, Send, Download, Copy, Check, QrCode, RefreshCw, Settings, Sliders, X, ArrowLeftRight, MoveVertical, Touchpad } from 'lucide-react';
+import { ArrowDown, ChevronDown, Send, Download, Copy, Check, QrCode, RefreshCw, Settings, Sliders, X, ArrowLeftRight } from 'lucide-react';
 import { motion, Reorder } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import { useTokenList, Token } from '../../hooks/useTokenList';
@@ -9,7 +9,8 @@ import { useBalance, useReadContract } from 'wagmi';
 import { cn } from '../../lib/utils';
 import { QRScannerModal } from '../common/QRScannerModal';
 import { useUniswapToast } from '../common/UniswapToast';
-import { triggerNetworkSwitchPrompt } from '../common/NetworkSwitchModal';
+import { useWalletContractInteraction } from '../../hooks/useWalletContractInteraction';
+import { useCurrency } from '../../context/CurrencyContext';
 
 type Mode = 'swap' | 'send' | 'receive' | 'sell';
 
@@ -23,6 +24,8 @@ export default function SwapWidget() {
   const { address, isConnected } = useAppKitAccount();
   const { open } = useAppKit();
   const { showToast } = useUniswapToast();
+  const { executeInteraction, setStatus, isPending: isProcessing, statusMessage } = useWalletContractInteraction();
+  const { formatFiat } = useCurrency();
 
   const { data: tokens } = useTokenList();
   const [searchParams] = useSearchParams();
@@ -103,9 +106,6 @@ export default function SwapWidget() {
     setAmountOut('');
   };
 
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-
   // Live Native ETH Balance
   const { data: ethBalanceData } = useBalance({
     address: address as `0x${string}` | undefined,
@@ -176,106 +176,100 @@ export default function SwapWidget() {
 
     if (activeMode === 'swap' || activeMode === 'sell') {
       if (!amountIn || parseFloat(amountIn) <= 0) {
-        setStatusMessage('Please enter a valid amount');
-        setTimeout(() => setStatusMessage(null), 3000);
+        showToast({
+          type: 'error',
+          title: 'Invalid Amount',
+          message: 'Please enter a valid amount greater than 0 to swap.',
+        });
         return;
       }
 
-      setIsProcessing(true);
-      const activeSlippageVal = customSlippage || slippage;
-      setStatusMessage(`Initiating transaction with ${activeSlippageVal}% slippage...`);
+      await executeInteraction(
+        activeMode === 'sell' ? 'Sell Token' : 'Swap Token',
+        async () => {
+          const { executeSwap, depositETH, depositToken } = await import('../../lib/contract');
+          let realTxHash: string | undefined;
 
-      try {
-        const { executeSwap, depositETH, depositToken } = await import('../../lib/contract');
-        let realTxHash: string | undefined;
-        
-        if (tokenIn?.symbol === 'ETH' || tokenIn?.id === '0x0000000000000000000000000000000000000000') {
-          const res = await depositETH(amountIn);
-          realTxHash = typeof res === 'string' ? res : res?.txHash;
-        } else if (tokenIn?.id) {
-          setStatusMessage('Executing token swap...');
-          const depositRes = await depositToken(tokenIn.id, amountIn, (tokenIn as any).decimals || 18);
-          realTxHash = typeof depositRes === 'string' ? depositRes : depositRes?.txHash;
-        } else {
-          const swapRes = await executeSwap(
-            tokenIn?.id || '0x0000000000000000000000000000000000000000',
-            tokenOut?.id || '0x0000000000000000000000000000000000000000',
-            amountIn
-          );
-          realTxHash = typeof swapRes === 'string' ? swapRes : swapRes?.txHash;
-        }
+          if (tokenIn?.symbol === 'ETH' || tokenIn?.id === '0x0000000000000000000000000000000000000000') {
+            const res = await depositETH(amountIn);
+            realTxHash = typeof res === 'string' ? res : res?.txHash;
+          } else if (tokenIn?.id) {
+            const depositRes = await depositToken(tokenIn.id, amountIn, (tokenIn as any).decimals || 18);
+            realTxHash = typeof depositRes === 'string' ? depositRes : depositRes?.txHash;
+          } else {
+            const swapRes = await executeSwap(
+              tokenIn?.id || '0x0000000000000000000000000000000000000000',
+              tokenOut?.id || '0x0000000000000000000000000000000000000000',
+              amountIn
+            );
+            realTxHash = typeof swapRes === 'string' ? swapRes : swapRes?.txHash;
+          }
 
-        const { saveUserActivity } = await import('../../lib/activity');
-        saveUserActivity({
-          type: 'Swap',
-          title: `Swapped ${amountIn} ${tokenIn?.symbol || 'ETH'} for ${amountOut || '0.00'} ${tokenOut?.symbol || 'USDC'}`,
-          amount: amountIn,
-          tokenIn: tokenIn?.symbol,
-          tokenOut: tokenOut?.symbol,
-          network: 'Unichain / Ethereum'
-        });
+          const { saveUserActivity } = await import('../../lib/activity');
+          saveUserActivity({
+            type: 'Swap',
+            title: `Swapped ${amountIn} ${tokenIn?.symbol || 'ETH'} for ${amountOut || '0.00'} ${tokenOut?.symbol || 'USDC'}`,
+            amount: amountIn,
+            tokenIn: tokenIn?.symbol,
+            tokenOut: tokenOut?.symbol,
+            network: 'Unichain / Ethereum',
+          });
 
-        showToast({
-          type: 'success',
-          title: 'Swap Submitted',
-          message: `Swapped ${amountIn} ${tokenIn?.symbol || 'ETH'} for ${amountOut || '0.00'} ${tokenOut?.symbol || 'USDC'}`,
-          txHash: realTxHash,
+          return realTxHash;
+        },
+        {
+          successTitle: 'Swap Executed',
+          successMessage: `Swapped ${amountIn} ${tokenIn?.symbol || 'ETH'} for ${amountOut || '0.00'} ${tokenOut?.symbol || 'USDC'}`,
           tokenInSymbol: tokenIn?.symbol || 'ETH',
           tokenOutSymbol: tokenOut?.symbol || 'USDC',
-        });
-
-        setStatusMessage('Transaction completed successfully!');
-        setTimeout(() => setStatusMessage(null), 4000);
-      } catch (err: any) {
-        showToast({
-          type: 'error',
-          title: 'Swap Failed',
-          message: err.message || 'Transaction rejected by wallet or node',
-        });
-        setStatusMessage(`Failed: ${err.message || 'Transaction rejected'}`);
-        setTimeout(() => setStatusMessage(null), 4000);
-      } finally {
-        setIsProcessing(false);
-      }
+        }
+      );
     } else if (activeMode === 'send') {
       if (!recipientAddress.startsWith('0x') || recipientAddress.length !== 42) {
-        setStatusMessage('Please enter a valid recipient 0x address');
-        setTimeout(() => setStatusMessage(null), 3000);
+        showToast({
+          type: 'error',
+          title: 'Invalid Address',
+          message: 'Please enter a valid 42-character Ethereum recipient address.',
+        });
         return;
       }
       if (!sendAmount || parseFloat(sendAmount) <= 0) {
-        setStatusMessage('Please enter an amount to send');
-        setTimeout(() => setStatusMessage(null), 3000);
+        showToast({
+          type: 'error',
+          title: 'Invalid Amount',
+          message: 'Please enter a valid amount greater than 0 to send.',
+        });
         return;
       }
 
-      setIsProcessing(true);
-      setStatusMessage(`Sending ${sendAmount} ${sendToken?.symbol || 'ETH'}...`);
+      await executeInteraction(
+        'Send Tokens',
+        async () => {
+          const { depositETH, depositToken } = await import('../../lib/contract');
+          let res: any;
+          if (sendToken?.symbol === 'ETH' || !sendToken?.id) {
+            res = await depositETH(sendAmount);
+          } else {
+            res = await depositToken(sendToken.id, sendAmount, (sendToken as any).decimals || 18);
+          }
 
-      try {
-        const { depositETH, depositToken } = await import('../../lib/contract');
-        if (sendToken?.symbol === 'ETH' || !sendToken?.id) {
-          await depositETH(sendAmount);
-        } else {
-          await depositToken(sendToken.id, sendAmount, (sendToken as any).decimals || 18);
+          const { saveUserActivity } = await import('../../lib/activity');
+          saveUserActivity({
+            type: 'Send',
+            title: `Sent ${sendAmount} ${sendToken?.symbol || 'ETH'} to ${recipientAddress.slice(0, 6)}...${recipientAddress.slice(-4)}`,
+            amount: sendAmount,
+            tokenIn: sendToken?.symbol || 'ETH',
+            network: 'Unichain / Ethereum',
+          });
+
+          return typeof res === 'string' ? res : res?.txHash;
+        },
+        {
+          successTitle: 'Tokens Sent',
+          successMessage: `Successfully sent ${sendAmount} ${sendToken?.symbol || 'ETH'} to ${recipientAddress.slice(0, 6)}...${recipientAddress.slice(-4)}`,
+          tokenInSymbol: sendToken?.symbol || 'ETH',
         }
-        const { saveUserActivity } = await import('../../lib/activity');
-        saveUserActivity({
-          type: 'Send',
-          title: `Sent ${sendAmount} ${sendToken?.symbol || 'ETH'} to ${recipientAddress.slice(0, 6)}...${recipientAddress.slice(-4)}`,
-          amount: sendAmount,
-          tokenIn: sendToken?.symbol || 'ETH',
-          network: 'Unichain / Ethereum'
-        });
-
-        setStatusMessage(`Successfully sent ${sendAmount} ${sendToken?.symbol || 'ETH'}!`);
-        setTimeout(() => setStatusMessage(null), 4000);
-      } catch (err: any) {
-        setStatusMessage(`Send failed: ${err.message || 'Transaction cancelled'}`);
-        setTimeout(() => setStatusMessage(null), 4000);
-      } finally {
-        setIsProcessing(false);
-      }
+      );
     }
   };
 
@@ -488,7 +482,7 @@ export default function SwapWidget() {
               {/* REAL LIVE DYNAMIC BALANCE DISPLAY & VALUE */}
               <div className="mt-3 pt-2.5 border-t border-border/30 flex items-center justify-between text-xs text-text-secondary font-medium">
                 <span className="font-mono text-text-tertiary">
-                  ${amountIn && (tokenIn as any)?.price ? (parseFloat(amountIn) * (tokenIn as any).price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                  {formatFiat(amountIn && (tokenIn as any)?.price ? parseFloat(amountIn) * (tokenIn as any).price : 0)}
                 </span>
 
                 <div className="flex items-center gap-2">
@@ -590,7 +584,7 @@ export default function SwapWidget() {
               {tokenOut && (
                 <div className="mt-3 pt-2.5 border-t border-border/30 flex items-center justify-between text-xs text-text-secondary font-medium">
                   <span className="font-mono text-text-tertiary">
-                    ${amountOut && (tokenOut as any)?.price ? (parseFloat(amountOut) * (tokenOut as any).price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                    {formatFiat(amountOut && (tokenOut as any)?.price ? parseFloat(amountOut) * (tokenOut as any).price : 0)}
                   </span>
 
                   <span className="text-text-tertiary">
@@ -795,7 +789,7 @@ export default function SwapWidget() {
         onClose={() => setShowQrScanner(false)}
         onScan={(scannedAddress) => {
           setRecipientAddress(scannedAddress);
-          setStatusMessage(`QR Address scanned: ${scannedAddress.slice(0, 6)}...${scannedAddress.slice(-4)}`);
+          setStatus(`QR Address scanned: ${scannedAddress.slice(0, 6)}...${scannedAddress.slice(-4)}`);
         }}
       />
     </div>
