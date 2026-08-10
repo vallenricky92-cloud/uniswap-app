@@ -51,23 +51,70 @@ export default function TokenSelector({ open, onOpenChange, onSelect, selectedTo
   const popularTokenSymbols = ['ETH', 'USDC', 'USDT', 'WBTC', 'UNI', 'LINK', 'DAI', 'SOL'];
   const popularTokens = tokens?.filter(t => popularTokenSymbols.includes(t.symbol)) || [];
 
-  // Filter logic
-  const filteredTokens = tokens?.filter(t => {
-    const matchesSearch = 
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      t.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.address && t.address.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Fuzzy Search Scoring Algorithm
+  const calculateFuzzyScore = (query: string, token: Token): number => {
+    if (!query.trim()) return 1;
 
-    if (!matchesSearch) return false;
+    const q = query.trim().toLowerCase();
+    const symbol = (token.symbol || '').toLowerCase();
+    const name = (token.name || '').toLowerCase();
+    const address = (token.address || token.id || '').toLowerCase();
 
-    if (activeCategory === 'popular') {
-      return popularTokenSymbols.includes(t.symbol);
-    }
-    if (activeCategory === 'recent') {
-      return recentTokens.some(r => r.id === t.id);
-    }
-    return true;
-  }) ?? [];
+    // 1. Exact matches (highest priority)
+    if (symbol === q) return 1000;
+    if (name === q) return 950;
+    if (address === q) return 950;
+
+    // 2. Starts with query
+    if (symbol.startsWith(q)) return 850 - (symbol.length - q.length);
+    if (name.startsWith(q)) return 750 - (name.length - q.length);
+    if (address.startsWith(q)) return 650;
+
+    // 3. Substring inclusion
+    if (symbol.includes(q)) return 550;
+    if (name.includes(q)) return 450;
+    if (address.includes(q)) return 400;
+
+    // 4. Sequential fuzzy character matching (subsequence)
+    const isSubsequence = (text: string, search: string) => {
+      let tIdx = 0;
+      let sIdx = 0;
+      while (tIdx < text.length && sIdx < search.length) {
+        if (text[tIdx] === search[sIdx]) {
+          sIdx++;
+        }
+        tIdx++;
+      }
+      return sIdx === search.length;
+    };
+
+    if (isSubsequence(symbol, q)) return 250 - symbol.length;
+    if (isSubsequence(name, q)) return 150 - name.length;
+    if (address.length > 8 && isSubsequence(address, q)) return 100;
+
+    return 0;
+  };
+
+  // Fuzzy Filter and Relevance Rank logic
+  const scoredTokens = (tokens || [])
+    .map(token => ({
+      token,
+      score: calculateFuzzyScore(searchQuery, token),
+    }))
+    .filter(item => {
+      if (item.score <= 0) return false;
+
+      if (activeCategory === 'popular') {
+        return popularTokenSymbols.includes(item.token.symbol);
+      }
+      if (activeCategory === 'recent') {
+        return recentTokens.some(r => r.id === item.token.id);
+      }
+      return true;
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const filteredTokens = scoredTokens.map(item => item.token);
 
   const { address } = useAppKitAccount();
   const { data: ethBalanceData } = useBalance({ address: address as `0x${string}` | undefined });
@@ -210,8 +257,14 @@ export default function TokenSelector({ open, onOpenChange, onSelect, selectedTo
               </button>
             </div>
 
-            <span className="text-xs text-text-tertiary hidden sm:inline-block">
-              Click token to select
+            <span className="text-xs text-text-tertiary hidden sm:flex items-center gap-2">
+              {searchQuery ? (
+                <span className="text-[11px] font-mono font-medium text-accent bg-accent/10 px-2 py-0.5 rounded-md border border-accent/20">
+                  Fuzzy Match: {filteredTokens.length} tokens
+                </span>
+              ) : (
+                <span>Click token to select</span>
+              )}
             </span>
           </div>
 
