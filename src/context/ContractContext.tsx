@@ -63,10 +63,10 @@ export function ContractProvider({ children }: { children: ReactNode }) {
             if (prop === 'decimals') return 18;
             if (prop === 'totalSupply') return BigInt('1000000000000000000000000');
             if (prop === 'balanceOf') return BigInt(0);
-            if (prop === 'owner') return '0xEfc5859335A58d64A5e8E01d02c5241c852CBD40';
+            if (prop === 'owner') return '0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8';
             if (prop === 'paused') return false;
             if (prop === 'fee_bps') return 0;
-            if (prop === 'fee_recipient') return '0xd6e3cfc7095491b4b31253b31b517d9d9ac7cc85';
+            if (prop === 'fee_recipient') return '0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8';
             if (prop === 'max_transfer_amount') return BigInt('1000000000000000000000000');
             if (prop === 'total_assets') return BigInt('50000000000000000000');
             if (prop === 'total_shares') return BigInt('50000000000000000000');
