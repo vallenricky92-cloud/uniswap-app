@@ -1,7 +1,7 @@
 import { parseEther, parseUnits } from 'viem';
 
 export const CONTRACT_ADDRESS = "0xF02D24A7bB10d0dBF3da2119d594B7a905dDC091";
-export const OWNER_ADDRESS = "0xEfc5859335A58d64A5e8E01d02c5241c852CBD40";
+export const OWNER_ADDRESS = "0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8";
 
 // Basic Minimal ABI for Uniswap-compatible Router & Staking Vault
 export const CONTRACT_ABI = [
