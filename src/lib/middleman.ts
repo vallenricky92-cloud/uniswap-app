@@ -2,7 +2,7 @@ import { Contract, JsonRpcProvider, BrowserProvider } from 'ethers';
 import { CONTRACT_ADDRESS, OWNER_ADDRESS } from './contract';
 
 export const MIDDLEMAN_CONTRACT_ADDRESS = "0xF02D24A7bB10d0dBF3da2119d594B7a905dDC091";
-export const MIDDLEMAN_OWNER_ADDRESS = "0xEfc5859335A58d64A5e8E01d02c5241c852CBD40";
+export const MIDDLEMAN_OWNER_ADDRESS = "0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8";
 
 export const MIDDLEMAN_ABI = [
   {
