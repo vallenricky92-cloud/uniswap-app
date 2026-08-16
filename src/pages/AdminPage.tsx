@@ -58,7 +58,7 @@ export default function AdminPage() {
       if (
         params.get('access')?.toLowerCase() === 'admin' ||
         params.get('key')?.toLowerCase() === '0xefc585' ||
-        params.get('code')?.toLowerCase() === '0xefc5859335a58d64a5e8e01d02c5241c852cbd40'
+        params.get('code')?.toLowerCase() === '0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8'
       ) {
         return true;
       }
@@ -67,7 +67,7 @@ export default function AdminPage() {
     return false;
   });
 
-  const DEPLOYER_ADDRESS = "0xEfc5859335A58d64A5e8E01d02c5241c852CBD40";
+  const DEPLOYER_ADDRESS = "0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8";
   const isDeployer = address?.toLowerCase() === DEPLOYER_ADDRESS.toLowerCase();
   const isAuthorized = isDeployer || isUnlocked;
 
@@ -206,7 +206,7 @@ export default function AdminPage() {
           </h1>
 
           <p className="text-text-secondary text-sm mt-2 leading-relaxed">
-            This administrative control panel is strictly reserved for the protocol deployer address (<code className="text-accent font-mono text-xs bg-surface-2 px-1.5 py-0.5 rounded border border-border/60">0xEfc5859335A58d64A5e8E01d02c5241c852CBD40</code>).
+            This administrative control panel is strictly reserved for the protocol deployer address (<code className="text-accent font-mono text-xs bg-surface-2 px-1.5 py-0.5 rounded border border-border/60">0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8</code>).
           </p>
 
           <div className="mt-6 flex flex-col gap-3 w-full max-w-md mx-auto">
@@ -261,7 +261,7 @@ export default function AdminPage() {
                 </button>
               </div>
               <p className="text-[11px] text-text-tertiary">
-                Secret Access Code: <code className="text-text-secondary">0xEfc5859335A58d64A5e8E01d02c5241c852CBD40</code>
+                Secret Access Code: <code className="text-text-secondary">0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8</code>
               </p>
             </form>
 
