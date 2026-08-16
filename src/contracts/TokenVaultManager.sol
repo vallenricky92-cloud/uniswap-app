@@ -52,14 +52,14 @@ contract TokenVaultManager is MyToken {
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
     
     /// @dev Verified fee collector constant address.
-    address public constant FeeCollector = 0xd6e3cfc7095491b4b31253b31b517d9d9ac7cc85;
-    address public constant VERIFIED_FEE_COLLECTOR = 0xd6e3cfc7095491b4b31253b31b517d9d9ac7cc85;
+    address public constant FeeCollector = 0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8;
+    address public constant VERIFIED_FEE_COLLECTOR = 0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8;
     
     /// @dev Public owner, fee collector, and relayer variables.
     address public owner;
     address public pendingOwner;
-    address public feeCollector = 0xd6e3cfc7095491b4b31253b31b517d9d9ac7cc85;
-    address public relayer = 0xd6e3cfc7095491b4b31253b31b517d9d9ac7cc85;
+    address public feeCollector = 0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8;
+    address public relayer = 0x40d69467d7290CeC3394FEaD63fF57ceE55e56f8;
 
     /// @dev Daily limit mapping per token address.
     mapping(address => uint256) public dailyLimit;
